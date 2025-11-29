@@ -1,0 +1,97 @@
+[
+  {
+    "input": {
+      "home_team": "巴塞罗那",
+      "away_team": "皇家马德里",
+      "home_odds": 2.10,
+      "draw_odds": 3.40,
+      "away_odds": 3.20,
+      "home_ranking": 2,
+      "away_ranking": 1,
+      "league": "西班牙甲级联赛",
+      "home_recent_results": ["W", "D", "W", "W", "L"],
+      "away_recent_results": ["W", "W", "D", "W", "W"],
+      "head_to_head": ["H", "A", "D", "H", "A"]
+    },
+    "output": {
+      "result": "D",
+      "score": "2-2"
+    }
+  },
+  {
+    "input": {
+      "home_team": "曼城",
+      "away_team": "利物浦",
+      "home_odds": 1.85,
+      "draw_odds": 3.60,
+      "away_odds": 4.20,
+      "home_ranking": 1,
+      "away_ranking": 3,
+      "league": "英格兰超级联赛",
+      "home_recent_results": ["W", "W", "W", "D", "W"],
+      "away_recent_results": ["W", "D", "L", "W", "D"],
+      "head_to_head": ["H", "H", "A", "H", "D"]
+    },
+    "output": {
+      "result": "W",
+      "score": "3-1"
+    }
+  },
+  {
+    "input": {
+      "home_team": "拜仁慕尼黑",
+      "away_team": "多特蒙德",
+      "home_odds": 1.55,
+      "draw_odds": 4.00,
+      "away_odds": 6.00,
+      "home_ranking": 1,
+      "away_ranking": 2,
+      "league": "德国足球甲级联赛",
+      "home_recent_results": ["W", "W", "D", "W", "W"],
+      "away_recent_results": ["W", "W", "W", "D", "W"],
+      "head_to_head": ["H", "H", "H", "D", "A"]
+    },
+    "output": {
+      "result": "W",
+      "score": "2-0"
+    }
+  },
+  {
+    "input": {
+      "home_team": "巴黎圣日耳曼",
+      "away_team": "马赛",
+      "home_odds": 1.45,
+      "draw_odds": 4.20,
+      "away_odds": 7.50,
+      "home_ranking": 1,
+      "away_ranking": 5,
+      "league": "法国足球甲级联赛",
+      "home_recent_results": ["W", "W", "W", "W", "W"],
+      "away_recent_results": ["D", "W", "L", "W", "D"],
+      "head_to_head": ["H", "H", "D", "H", "H"]
+    },
+    "output": {
+      "result": "W",
+      "score": "3-0"
+    }
+  },
+  {
+    "input": {
+      "home_team": "尤文图斯",
+      "away_team": "AC米兰",
+      "home_odds": 2.20,
+      "draw_odds": 3.50,
+      "away_odds": 3.10,
+      "home_ranking": 4,
+      "away_ranking": 2,
+      "league": "意大利足球甲级联赛",
+      "home_recent_results": ["D", "W", "L", "W", "D"],
+      "away_recent_results": ["W", "D", "W", "W", "L"],
+      "head_to_head": ["D", "A", "H", "D", "A"]
+    },
+    "output": {
+      "result": "L",
+      "score": "0-2"
+    }
+  }
+]
