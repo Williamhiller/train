@@ -1,0 +1,214 @@
+{
+    "rule_weights": {
+        "规则1：当主胜赔率低于1.8且主队近期胜率超过60%时，": 0.6719999999999999,
+        "规则2：当平赔高于3.5且客队近期不败率超过70%时，": 0.6719999999999999,
+        "规则3：当负赔低于2.2且客队客场胜率超过50%时，": 0.6719999999999999,
+        "规则4：当主胜赔率在1.5-1.7之间且主队主场胜率超过75%时，": 0.6719999999999999,
+        "规则5：当两队历史交锋平局率超过40%且平赔在3.0-3.3之间时，": 0.6719999999999999,
+        "规则6：当客队客场胜率超过60%且负赔低于2.0时，": 0.6719999999999999,
+        "规则7：当威廉希尔和立博的主胜赔率差超过0.2时，": 0.5599999999999999,
+        "规则8：当平赔低于3.0且两队积分差距小于5分时，": 0.6719999999999999
+    },
+    "rule_performance": {
+        "规则1：当主胜赔率低于1.8且主队近期胜率超过60%时，": [],
+        "规则2：当平赔高于3.5且客队近期不败率超过70%时，": [],
+        "规则3：当负赔低于2.2且客队客场胜率超过50%时，": [],
+        "规则4：当主胜赔率在1.5-1.7之间且主队主场胜率超过75%时，": [],
+        "规则5：当两队历史交锋平局率超过40%且平赔在3.0-3.3之间时，": [],
+        "规则6：当客队客场胜率超过60%且负赔低于2.0时，": [],
+        "规则7：当威廉希尔和立博的主胜赔率差超过0.2时，": [],
+        "规则8：当平赔低于3.0且两队积分差距小于5分时，": []
+    },
+    "structured_rules": [
+        {
+            "id": "rule_1",
+            "raw_text": "规则1：当主胜赔率低于1.8且主队近期胜率超过60%时，",
+            "conditions": [
+                {
+                    "type": "odds",
+                    "odds_type": "win",
+                    "operator": "低于",
+                    "value1": 1.8,
+                    "value2": null
+                },
+                {
+                    "type": "win_rate",
+                    "team_type": "home",
+                    "rate_type": "胜率",
+                    "threshold": 0.6,
+                    "operator": "超过"
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_2",
+            "raw_text": "规则2：当平赔高于3.5且客队近期不败率超过70%时，",
+            "conditions": [
+                {
+                    "type": "odds",
+                    "odds_type": "draw",
+                    "operator": "高于",
+                    "value1": 3.5,
+                    "value2": null
+                },
+                {
+                    "type": "win_rate",
+                    "team_type": "away",
+                    "rate_type": "不败率",
+                    "threshold": 0.7,
+                    "operator": "超过"
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_3",
+            "raw_text": "规则3：当负赔低于2.2且客队客场胜率超过50%时，",
+            "conditions": [
+                {
+                    "type": "odds",
+                    "odds_type": "lose",
+                    "operator": "低于",
+                    "value1": 2.2,
+                    "value2": null
+                },
+                {
+                    "type": "win_rate",
+                    "team_type": "away",
+                    "rate_type": "胜率",
+                    "threshold": 0.5,
+                    "operator": "超过"
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_4",
+            "raw_text": "规则4：当主胜赔率在1.5-1.7之间且主队主场胜率超过75%时，",
+            "conditions": [
+                {
+                    "type": "odds",
+                    "odds_type": "win",
+                    "operator": "在",
+                    "value1": 1.5,
+                    "value2": 1.7
+                },
+                {
+                    "type": "win_rate",
+                    "team_type": "home",
+                    "rate_type": "胜率",
+                    "threshold": 0.75,
+                    "operator": "超过"
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_5",
+            "raw_text": "规则5：当两队历史交锋平局率超过40%且平赔在3.0-3.3之间时，",
+            "conditions": [
+                {
+                    "type": "head2head",
+                    "rate_type": "平局率",
+                    "threshold": 0.4,
+                    "operator": "超过"
+                },
+                {
+                    "type": "odds",
+                    "odds_type": "draw",
+                    "operator": "在",
+                    "value1": 3.0,
+                    "value2": 3.3
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_6",
+            "raw_text": "规则6：当客队客场胜率超过60%且负赔低于2.0时，",
+            "conditions": [
+                {
+                    "type": "win_rate",
+                    "team_type": "away",
+                    "rate_type": "胜率",
+                    "threshold": 0.6,
+                    "operator": "超过"
+                },
+                {
+                    "type": "odds",
+                    "odds_type": "lose",
+                    "operator": "低于",
+                    "value1": 2.0,
+                    "value2": null
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_7",
+            "raw_text": "规则7：当威廉希尔和立博的主胜赔率差超过0.2时，",
+            "conditions": [],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        },
+        {
+            "id": "rule_8",
+            "raw_text": "规则8：当平赔低于3.0且两队积分差距小于5分时，",
+            "conditions": [
+                {
+                    "type": "odds",
+                    "odds_type": "draw",
+                    "operator": "低于",
+                    "value1": 3.0,
+                    "value2": null
+                },
+                {
+                    "type": "points_diff",
+                    "threshold": 5.0,
+                    "operator": "小于"
+                }
+            ],
+            "conclusion": {
+                "result_type": "unknown",
+                "confidence": 0.7,
+                "description": ""
+            },
+            "type": "general"
+        }
+    ]
+}

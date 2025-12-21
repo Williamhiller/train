@@ -1,0 +1,80 @@
+{
+  "model_name": "xgboost",
+  "include_team_state": false,
+  "include_expert": false,
+  "seasons": [
+    "2017-2018"
+  ],
+  "feature_names": [
+    "initial_win_odds",
+    "initial_draw_odds",
+    "initial_lose_odds",
+    "initial_payout_rate",
+    "initial_implied_win_prob",
+    "initial_implied_draw_prob",
+    "initial_implied_lose_prob",
+    "initial_win_kelly",
+    "initial_draw_kelly",
+    "initial_lose_kelly",
+    "closing_win_odds",
+    "closing_draw_odds",
+    "closing_lose_odds",
+    "closing_payout_rate",
+    "closing_implied_win_prob",
+    "closing_implied_draw_prob",
+    "closing_implied_lose_prob",
+    "closing_win_kelly",
+    "closing_draw_kelly",
+    "closing_lose_kelly",
+    "win_odds_change_rate",
+    "draw_odds_change_rate",
+    "lose_odds_change_rate",
+    "odds_change_frequency",
+    "win_odds_trend_strength",
+    "draw_odds_trend_strength",
+    "lose_odds_trend_strength",
+    "win_odds_trend_down",
+    "win_odds_trend_stable",
+    "win_odds_trend_up",
+    "draw_odds_trend_down",
+    "draw_odds_trend_stable",
+    "draw_odds_trend_up",
+    "lose_odds_trend_down",
+    "lose_odds_trend_stable",
+    "lose_odds_trend_up"
+  ],
+  "accuracy": 0.5405405405405406,
+  "classification_report": {
+    "客胜": {
+      "precision": 0.6086956521739131,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6363636363636365,
+      "support": 21
+    },
+    "平局": {
+      "precision": 0.2727272727272727,
+      "recall": 0.16666666666666666,
+      "f1-score": 0.20689655172413793,
+      "support": 18
+    },
+    "主胜": {
+      "precision": 0.575,
+      "recall": 0.6571428571428571,
+      "f1-score": 0.6133333333333333,
+      "support": 35
+    },
+    "accuracy": 0.5405405405405406,
+    "macro avg": {
+      "precision": 0.48547430830039523,
+      "recall": 0.49682539682539684,
+      "f1-score": 0.48553117380703587,
+      "support": 74
+    },
+    "weighted avg": {
+      "precision": 0.5110364811451769,
+      "recall": 0.5405405405405406,
+      "f1-score": 0.5210059589369934,
+      "support": 74
+    }
+  }
+}
