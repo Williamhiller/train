@@ -5,6 +5,19 @@ model:
   quantization: true  # 是否使用量化（节省内存）
   quant_bits: 4  # 量化位数
 
+# 专家分析LLM配置
+expert_analysis_llm:
+  enabled: true  # 是否启用LLM专家分析
+  model_name: "./models/cache/models--Qwen--Qwen2.5-0.5B-Instruct/snapshots/7ae557604adf67be50417f59c2c2f167def9a775"  # 使用实际的模型快照路径
+  max_length: 256  # 最小序列长度
+  temperature: 0.3  # 专家分析的创造性（较低值更准确）
+  top_p: 0.8  # 专家分析的采样参数
+  do_sample: true
+  device_map: "cpu"  # 强制使用CPU
+  trust_remote_code: true  # 信任远程代码
+  cache_dir: "./models/cache"  # 模型缓存目录
+  force_local: true  # 强制使用本地模型
+
 # 训练配置
 training:
   output_dir: "./models/fine_tuned_model"

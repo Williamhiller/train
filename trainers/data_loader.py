@@ -111,6 +111,73 @@ class DataLoader:
         
         return pd.DataFrame(matches)
     
+    def load_combined_features(self, season, include_team_state=False, include_expert=False, use_llm=False):
+        """加载组合特征"""
+        # 加载赔率特征（基础特征）
+        odds_df = self.load_odds_features(season)
+        
+        # 合并球队状态特征
+        if include_team_state:
+            team_state_df = self.load_team_state_features(season)
+            # 将match_id转换为字符串进行合并
+            odds_df['match_id'] = odds_df['match_id'].astype(str)
+            team_state_df['match_id'] = team_state_df['match_id'].astype(str)
+            odds_df = odds_df.merge(team_state_df, on=['match_id', 'season'], how='inner')
+        
+        # 合并专家特征
+        if include_expert:
+            expert_df = self.load_expert_features(season, use_llm)
+            # 将match_id转换为字符串进行合并
+            odds_df['match_id'] = odds_df['match_id'].astype(str)
+            expert_df['match_id'] = expert_df['match_id'].astype(str)
+            odds_df = odds_df.merge(expert_df, on=['match_id', 'season'], how='inner')
+        
+        return odds_df
+    
+    def prepare_training_data(self, seasons, include_team_state=False, include_expert=False, use_llm=False):
+        """准备训练数据"""
+        all_data = []
+        
+        for season in seasons:
+            try:
+                season_data = self.load_combined_features(season, include_team_state, include_expert, use_llm)
+                all_data.append(season_data)
+            except FileNotFoundError as e:
+                print(f"跳过赛季 {season}: {e}")
+        
+        if not all_data:
+            raise ValueError("没有找到任何训练数据")
+        
+        # 合并所有赛季的数据
+        df = pd.concat(all_data, ignore_index=True)
+        
+        # 处理缺失值
+        df = df.dropna()
+        
+        # 不再过滤赔率数据，保留所有比赛
+        print(f"数据量: {len(df)}")
+        
+        # 保存完整特征数据，包含赔率信息
+        self.X_full = df.copy()
+        
+        # 特征和标签分离
+        features = df.drop(['match_id', 'season', 'result_code', 'home_score', 'away_score'], axis=1, errors='ignore')
+        labels = df['result_code']
+        
+        # 转换分类特征
+        categorical_cols = features.select_dtypes(include=['object']).columns
+        if len(categorical_cols) > 0:
+            features = pd.get_dummies(features, columns=categorical_cols)
+        
+        # 分割训练集和测试集
+        X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+        
+        # 保存分割后的索引，以便后续匹配
+        self.train_indices = X_train.index
+        self.test_indices = X_test.index
+        
+        return X_train, X_test, y_train, y_test, features.columns.tolist()
+    
     def load_team_state_features(self, season):
         """加载球队状态特征"""
         file_path = os.path.join(self.data_root, 'team_state', f'{season}_team_state_features.json')
@@ -198,9 +265,19 @@ class DataLoader:
         
         return pd.DataFrame(matches)
     
-    def load_expert_features(self, season):
+    def load_expert_features(self, season, use_llm=False):
         """加载专家特征"""
-        file_path = os.path.join(self.data_root, 'expert', f'{season}_expert_features.json')
+        if use_llm:
+            file_path = os.path.join(self.data_root, 'expert', f'{season}_expert_features_llm.json')
+        else:
+            file_path = os.path.join(self.data_root, 'expert', f'{season}_expert_features.json')
+        
+        if not os.path.exists(file_path):
+            # 如果LLM增强特征文件不存在，回退到原始特征
+            if use_llm:
+                print(f"LLM增强专家特征文件不存在，回退到原始特征: {file_path}")
+                file_path = os.path.join(self.data_root, 'expert', f'{season}_expert_features.json')
+            
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"专家特征文件不存在: {file_path}")
         
@@ -218,63 +295,13 @@ class DataLoader:
                 'recent_form_odds_correlation': features['recent_form_odds_correlation'],
                 'expert_confidence_score': features['expert_confidence_score']
             }
+            
+            # 添加LLM增强特征（如果存在）
+            if 'llm_enhanced' in features and features['llm_enhanced']:
+                for key, value in features.items():
+                    if key.startswith('llm_'):
+                        match_data[key] = value
+            
             matches.append(match_data)
         
         return pd.DataFrame(matches)
-    
-    def load_combined_features(self, season, include_team_state=False, include_expert=False):
-        """加载组合特征"""
-        # 加载赔率特征（基础特征）
-        odds_df = self.load_odds_features(season)
-        
-        # 合并球队状态特征
-        if include_team_state:
-            team_state_df = self.load_team_state_features(season)
-            # 将match_id转换为字符串进行合并
-            odds_df['match_id'] = odds_df['match_id'].astype(str)
-            team_state_df['match_id'] = team_state_df['match_id'].astype(str)
-            odds_df = odds_df.merge(team_state_df, on=['match_id', 'season'], how='inner')
-        
-        # 合并专家特征
-        if include_expert:
-            expert_df = self.load_expert_features(season)
-            # 将match_id转换为字符串进行合并
-            odds_df['match_id'] = odds_df['match_id'].astype(str)
-            expert_df['match_id'] = expert_df['match_id'].astype(str)
-            odds_df = odds_df.merge(expert_df, on=['match_id', 'season'], how='inner')
-        
-        return odds_df
-    
-    def prepare_training_data(self, seasons, include_team_state=False, include_expert=False):
-        """准备训练数据"""
-        all_data = []
-        
-        for season in seasons:
-            try:
-                season_data = self.load_combined_features(season, include_team_state, include_expert)
-                all_data.append(season_data)
-            except FileNotFoundError as e:
-                print(f"跳过赛季 {season}: {e}")
-        
-        if not all_data:
-            raise ValueError("没有找到任何训练数据")
-        
-        # 合并所有赛季的数据
-        df = pd.concat(all_data, ignore_index=True)
-        
-        # 处理缺失值
-        df = df.dropna()
-        
-        # 特征和标签分离
-        features = df.drop(['match_id', 'season', 'result_code', 'home_score', 'away_score'], axis=1, errors='ignore')
-        labels = df['result_code']
-        
-        # 转换分类特征
-        categorical_cols = features.select_dtypes(include=['object']).columns
-        if len(categorical_cols) > 0:
-            features = pd.get_dummies(features, columns=categorical_cols)
-        
-        # 分割训练集和测试集
-        X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
-        
-        return X_train, X_test, y_train, y_test, features.columns.tolist()

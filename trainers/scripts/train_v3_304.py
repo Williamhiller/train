@@ -24,13 +24,13 @@ def main():
     # 选择要训练的赛季 - 使用所有赛季
     seasons = ['2015-2016', '2016-2017', '2017-2018', '2018-2019', '2019-2020', 
                '2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025']
-    model_name = "xgboost"
+    model_name = "lightgbm"
     
     # 创建模型训练器
     trainer = ModelTrainerV3(data_root, model_dir)
     
-    # 训练模型并指定自定义版本号3.0.4
-    model, model_info = trainer.train(seasons, model_name, custom_version="3.0.4")
+    # 训练模型并指定自定义版本号3.0.4，开启超参调优
+    model, model_info = trainer.train(seasons, model_name, custom_version="3.0.4", tune_hyperparams=True)
     
     print(f"\n=== V3.0.4模型训练完成 ===")
     print(f"使用赛季: {', '.join(seasons)}")

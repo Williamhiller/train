@@ -1,0 +1,169 @@
+# V5模型配置文件
+
+# 模型基本配置
+model:
+  name: "v5_fusion_model"
+  version: "5.0.0"
+  description: "融合Qwen、赔率和球队近况的足球预测模型"
+  
+# Qwen配置
+qwen:
+  model_path: "/Users/Williamhiler/Documents/my-project/train/models/cache/models--Qwen--Qwen2.5-0.5B-Instruct/snapshots/7ae557604adf67be50417f59c2c2f167def9a775"
+  tokenizer_path: "/Users/Williamhiler/Documents/my-project/train/models/cache/models--Qwen--Qwen2.5-0.5B-Instruct/snapshots/7ae557604adf67be50417f59c2c2f167def9a775"
+  max_length: 2048
+  temperature: 0.7
+  top_p: 0.9
+  device: "auto"  # auto, cpu, cuda
+  
+# 数据配置
+data:
+  raw_data_path: "/Users/Williamhiler/Documents/my-project/train/original-data"
+  processed_data_path: "/Users/Williamhiler/Documents/my-project/train/v5/data/processed"
+  expert_data_path: "/Users/Williamhiler/Documents/my-project/train/pdf"
+  test_data_path: "/Users/Williamhiler/Documents/my-project/train/test_data"
+  batch_size: 8  # 减小批次大小以适应1.5B模型
+  max_sequence_length: 512
+  train_val_split: 0.8
+  # 历史数据配置
+  historical_data:
+    use_historical: true
+    seasons: ["2015-2016", "2016-2017", "2017-2018", "2018-2019", "2019-2020", "2020-2021", "2021-2022", "2022-2023", "2023-2024"]
+    min_matches_per_team: 5  # 每支球队最少比赛场次
+    form_window: 5  # 近期状态窗口大小
+  
+# 特征工程配置
+features:
+  text_features:
+    - "team_recent_form"
+    - "expert_analysis"
+    - "match_context"
+    - "historical_performance"
+    - "head_to_head_history"
+  
+  structured_features:
+    - "historical_odds"
+    - "team_statistics"
+    - "head_to_head"
+    - "home_away_performance"
+    - "recent_form_trends"
+  
+  odds_features:
+    - "win_odds"
+    - "draw_odds"
+    - "loss_odds"
+    - "over_under"
+    - "asian_handicap"
+  
+  # 专家分析配置
+expert_analysis:
+    extract_from_pdf: true
+    pdf_directory: "/Users/Williamhiler/Documents/my-project/train/pdf"
+    use_llm_for_analysis: true
+    analysis_prompt_template: "基于以下专家分析，提取足球比赛预测的关键规则和模式：{expert_text}"
+    max_rules_per_category: 10
+    
+# 专家分析LLM配置
+expert_analysis_llm:
+    enabled: true
+    model_name: "/Users/Williamhiler/Documents/my-project/train/models/cache/models--Qwen--Qwen2.5-0.5B-Instruct/snapshots/7ae557604adf67be50417f59c2c2f167def9a775"  # 使用实际的模型快照路径
+    max_length: 256
+    temperature: 0.3
+    top_p: 0.8
+    do_sample: true
+    device_map: "cpu"
+    trust_remote_code: true
+    cache_dir: "/Users/Williamhiler/Documents/my-project/train/models/cache"  # 模型缓存目录
+    force_local: true
+    
+# 训练配置
+training:
+  epochs: 50
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_steps: 1000
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  early_stopping_patience: 5
+  save_steps: 1000
+  eval_steps: 500
+  logging_steps: 100
+  
+# 模型架构配置
+architecture:
+  qwen_adapter:
+    hidden_size: 768
+    dropout: 0.1
+    freeze_base_model: false
+    
+  structured_encoder:
+    layers: 3
+    hidden_size: 256
+    activation: "relu"
+    dropout: 0.2
+    
+  fusion_layer:
+    method: "attention"  # attention, concat, gated
+    hidden_size: 512
+    num_heads: 8
+    
+  prediction_head:
+    layers: 2
+    hidden_size: 256
+    output_size: 3  # win, draw, loss
+    activation: "relu"
+    dropout: 0.1
+
+# V3模型配置
+v3_model:
+  enabled: true
+  version: "3.0.4"
+  model_dir: "/Users/Williamhiler/Documents/my-project/train/models/v3/3.0.4"
+    
+# 评估配置
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "auc"
+  eval_batch_size: 32
+  
+# 保存配置
+saving:
+  checkpoint_dir: "/Users/Williamhiler/Documents/my-project/train/v5/checkpoints"
+  save_best_only: true
+  save_total_limit: 5
+  monitor: "val_f1"
+  mode: "max"
+  # 模型导出配置
+  export:
+    export_for_inference: true
+    export_dir: "/Users/Williamhiler/Documents/my-project/train/v5/exported_model"
+  
+# 推理配置
+inference:
+  max_text_length: 1024
+  batch_size: 8
+  temperature: 0.7
+  top_p: 0.9
+  num_beams: 3
+  
+# 对话接口配置
+chat:
+  system_prompt: "你是一个专业的足球比赛预测专家，能够根据球队近期表现、赔率数据和专家分析来预测比赛结果。"
+  max_history: 10
+  response_length: 200
+  
+# API配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins: ["*"]
+  
+# 日志配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "/Users/Williamhiler/Documents/my-project/train/v5/logs/v5_training.log"
