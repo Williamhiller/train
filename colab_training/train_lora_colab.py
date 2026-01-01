@@ -126,7 +126,7 @@ def main():
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
-        dataset_text_field="text",
+        formatting_func=lambda examples: examples["text"],
         args=TrainingArguments(
             per_device_train_batch_size=Config.per_device_train_batch_size,
             gradient_accumulation_steps=Config.gradient_accumulation_steps,
