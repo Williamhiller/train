@@ -46,21 +46,51 @@ train/colab_training/
 ```bash
 # 安装基础依赖
 pip install -q transformers torch datasets peft trl accelerate bitsandbytes
-
-# 安装Unsloth（可选，用于加速训练）
-pip install -q unsloth
 ```
+
+**注意**：Unsloth依赖已从训练脚本中移除，无需安装Unsloth库，避免依赖冲突问题。
 
 ### 3. 从GitHub拉取项目
 
+#### 方法一：使用SSH URL（推荐）
 ```bash
-# 克隆项目到Colab
+# 克隆项目到Colab（需要配置SSH密钥）
+git clone git@github.com:Williamhiller/train.git
+cd train/colab_training
+
+# 创建输出目录
+mkdir -p out
+```
+
+#### 方法二：使用HTTPS URL（需要个人访问令牌PAT）
+```bash
+# 克隆项目到Colab（需要输入个人访问令牌）
 git clone https://github.com/Williamhiller/train.git
 cd train/colab_training
 
 # 创建输出目录
 mkdir -p out
 ```
+
+#### 方法三：直接下载ZIP文件（无需Git认证）
+```bash
+# 下载项目ZIP文件
+wget -O train.zip https://github.com/Williamhiller/train/archive/refs/heads/main.zip
+
+# 解压ZIP文件
+unzip train.zip
+mv train-main train
+cd train/colab_training
+
+# 创建输出目录
+mkdir -p out
+```
+
+**注意**：
+- GitHub不再支持密码认证，使用HTTPS URL时需要生成并使用个人访问令牌（PAT）
+- SSH URL需要在GitHub账户中配置SSH密钥
+- ZIP文件方法无需Git认证，适合快速开始
+- 详细配置指南：[GitHub认证方式](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github)
 
 ### 4. 运行第一步训练
 
