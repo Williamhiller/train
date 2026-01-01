@@ -104,6 +104,14 @@ def main():
     print("第一步训练：使用专家数据进行初始微调（Colab版本）")
     print("=" * 60)
     
+    # 禁用代理设置
+    import os as os_module
+    os_module.environ.pop('http_proxy', None)
+    os_module.environ.pop('https_proxy', None)
+    os_module.environ.pop('HTTP_PROXY', None)
+    os_module.environ.pop('HTTPS_PROXY', None)
+    print("已禁用代理设置")
+    
     # 0. 检查并创建Google Drive目录
     print(f"\n0. 检查Google Drive挂载和创建目录")
     gdrive_base = Config.gdrive_base_path
