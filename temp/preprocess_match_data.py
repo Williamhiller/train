@@ -194,7 +194,7 @@ def get_bookie_name(bookie_id):
 def normalize_team_history(team_data):
     """归一化球队历史数据
     
-    将球队历史数据转换为胜平负格式，数组最后一位为结果（310制）
+    将球队历史数据转换为胜平负格式，数组第6位（索引5）为结果（310制）
     
     Args:
         team_data: 球队历史数据
@@ -210,10 +210,10 @@ def normalize_team_history(team_data):
     draw_count = 0
     loss_count = 0
     
-    for match in team_data[:6]:  # 只取最近6场
-        if isinstance(match, list) and len(match) >= 5:
-            # 结果映射：3=胜，1=平，0=负，取数组第5个元素（索引4）
-            result_num = str(match[4])
+    for match in team_data[-6:]:  # 只取最近6场（后6场是最新的）
+        if isinstance(match, list) and len(match) >= 6:
+            # 结果映射：3=胜，1=平，0=负，取数组第6个元素（索引5）
+            result_num = str(match[5])
             if result_num == "3":
                 result = "胜"
                 win_count += 1
@@ -530,11 +530,11 @@ def extract_features(match_id, match_info):
         # 只取最近6场交锋
         recent_history = history_data[-6:]  # 最近6场
         for match in recent_history:
-            if isinstance(match, list) and len(match) >= 5:
-                # 历史交锋数据格式：[主队, 客队, 主队得分, 客队得分, 结果, 时间]
-                h2h_home_team = match[0]
-                h2h_away_team = match[1]
-                h2h_result = match[4]
+            if isinstance(match, list) and len(match) >= 6:
+                # 历史交锋数据格式：[日期, 主队, 客队, 主队得分, 客队得分, 结果]
+                h2h_home_team = match[1]
+                h2h_away_team = match[2]
+                h2h_result = match[5]
                 
                 # 统计胜负平
                 if h2h_result == 3:  # 主队胜
