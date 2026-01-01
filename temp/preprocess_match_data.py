@@ -11,7 +11,7 @@
    - 球队历史数据
    - 赛季数据
 3. 构建训练数据集
-4. 保存为训练格式（指令-回答对）
+4. 保存为训练格式（指令-回答格式）
 5. 支持多种输出格式
 
 使用方法：
@@ -212,21 +212,21 @@ def normalize_team_history(team_data):
     
     for match in team_data[:6]:  # 只取最近6场
         if isinstance(match, list) and len(match) >= 5:
-                # 结果映射：3=胜，1=平，0=负，取数组第5个元素（索引4）
-                result_num = str(match[4])
-                if result_num == "3":
-                    result = "胜"
-                    win_count += 1
-                elif result_num == "1":
-                    result = "平"
-                    draw_count += 1
-                elif result_num == "0":
-                    result = "负"
-                    loss_count += 1
-                else:
-                    result = "未知"
-                
-                detailed_results.append(result)
+            # 结果映射：3=胜，1=平，0=负，取数组第5个元素（索引4）
+            result_num = str(match[4])
+            if result_num == "3":
+                result = "胜"
+                win_count += 1
+            elif result_num == "1":
+                result = "平"
+                draw_count += 1
+            elif result_num == "0":
+                result = "负"
+                loss_count += 1
+            else:
+                result = "未知"
+            
+            detailed_results.append(result)
     
     # 构建文字版战绩
     total_matches = len(detailed_results)
@@ -361,6 +361,51 @@ def analyze_odds_changes(odds_list):
     }
 
 
+def process_season_data(season_data):
+    """处理赛季数据，只保留胜率、排名、场均进球、场均失球
+    
+    Args:
+        season_data: 赛季数据字典
+        
+    Returns:
+        dict: 简化后的赛季数据
+    """
+    if not season_data or not isinstance(season_data, dict):
+        return {}
+    
+    processed = {}
+    
+    # 胜率
+    if 'winRate' in season_data:
+        processed['胜率'] = season_data['winRate']
+    
+    # 排名
+    if 'rank' in season_data:
+        processed['排名'] = season_data['rank']
+    
+    # 场均进球
+    if 'goalsFor' in season_data and 'totalMatches' in season_data:
+        try:
+            total_goals = int(season_data['goalsFor'])
+            total_matches = int(season_data['totalMatches'])
+            if total_matches > 0:
+                processed['场均进球'] = f"{total_goals / total_matches:.2f}"
+        except (ValueError, TypeError):
+            pass
+    
+    # 场均失球
+    if 'goalsAgainst' in season_data and 'totalMatches' in season_data:
+        try:
+            total_goals_against = int(season_data['goalsAgainst'])
+            total_matches = int(season_data['totalMatches'])
+            if total_matches > 0:
+                processed['场均失球'] = f"{total_goals_against / total_matches:.2f}"
+        except (ValueError, TypeError):
+            pass
+    
+    return processed
+
+
 def load_match_data(file_path_or_dir):
     """加载比赛数据
     
@@ -465,61 +510,61 @@ def extract_features(match_id, match_info):
     
     history_data = history.get("historyData", [])
     
-    # 提取赛季数据
-    home_season = history.get("homeSeasonData", {})
-    away_season = history.get("awaySeasonData", {})
+    # 提取赛季数据并处理
+    home_season_raw = history.get("homeSeasonData", {})
+    away_season_raw = history.get("awaySeasonData", {})
     
-    # 分析历史交锋数据
+    home_season = process_season_data(home_season_raw)
+    away_season = process_season_data(away_season_raw)
+    
+    # 分析历史交锋数据，取最近6场
     home_win_h2h = 0
     draw_h2h = 0
     away_win_h2h = 0
     total_h2h = 0
-    last_5_h2h = []
+    last_6_h2h = []
     
     if history_data and isinstance(history_data, list):
         total_h2h = len(history_data)
         
-        for match in history_data:
-            if isinstance(match, list) and len(match) >= 6:
+        # 只取最近6场交锋
+        recent_history = history_data[-6:]  # 最近6场
+        for match in recent_history:
+            if isinstance(match, list) and len(match) >= 5:
                 # 历史交锋数据格式：[主队, 客队, 主队得分, 客队得分, 结果, 时间]
                 h2h_home_team = match[0]
                 h2h_away_team = match[1]
-                h2h_home_score = int(match[2]) if isinstance(match[2], (int, str)) else 0
-                h2h_away_score = int(match[3]) if isinstance(match[3], (int, str)) else 0
                 h2h_result = match[4]
-                h2h_time = match[5]
                 
                 # 统计胜负平
                 if h2h_result == 3:  # 主队胜
                     if h2h_home_team == home_team_id:
                         home_win_h2h += 1
-                        last_5_h2h.append("主胜")
+                        last_6_h2h.append("主胜")
                     else:
                         away_win_h2h += 1
-                        last_5_h2h.append("客胜")
+                        last_6_h2h.append("客胜")
                 elif h2h_result == 1:  # 平局
                     draw_h2h += 1
-                    last_5_h2h.append("平局")
+                    last_6_h2h.append("平局")
                 elif h2h_result == 0:  # 客队胜
                     if h2h_away_team == home_team_id:
                         home_win_h2h += 1
-                        last_5_h2h.append("主胜")
+                        last_6_h2h.append("主胜")
                     else:
                         away_win_h2h += 1
-                        last_5_h2h.append("客胜")
-        
-        # 只保留最近5场交锋
-        last_5_h2h = last_5_h2h[-5:]
+                        last_6_h2h.append("客胜")
     
     # 构建特征文本
     features_text = f"比赛时间：{match_time}\n"
     features_text += f"对阵：{home_team} VS {away_team}\n"
     features_text += f"比赛结果：{home_score}-{away_score}（{['客胜', '平局', '未知', '主胜'][result] if result in [0,1,3] else '未知'}\n"
-    # 添加历史交锋数据
+    
+    # 添加历史交锋数据（最近6场）
     if total_h2h > 0:
         features_text += f"历史交锋：共{total_h2h}次交锋，{home_team}胜{home_win_h2h}场，平局{draw_h2h}场，{away_team}胜{away_win_h2h}场\n"
-        if last_5_h2h:
-            features_text += f"最近5场交锋：{', '.join(last_5_h2h)}\n"
+        if last_6_h2h:
+            features_text += f"最近6场交锋：{', '.join(last_6_h2h)}\n"
     
     # 赔率信息
     if odds_info:
@@ -529,11 +574,11 @@ def extract_features(match_id, match_info):
             odds_str.append(f"{odd['bookie_name']}：胜{odd['home_win']}，平{odd['draw']}，负{odd['away_win']}（趋势：{change_analysis['trend']}，主胜赔率{change_analysis['home_trend']}，平局赔率{change_analysis['draw_trend']}，客胜赔率{change_analysis['away_trend']}，显著变化{change_analysis['significant_changes']}次）")
         features_text += f"赔率信息：{'; '.join(odds_str)}\n"
     
-    # 球队近期战绩（文字版）
+    # 球队近期战绩（文字版，最近6场）
     features_text += f"主队近期战绩：{home_record_text}\n"
     features_text += f"客队近期战绩：{away_record_text}\n"
     
-    # 赛季数据
+    # 赛季数据（简化版）
     if home_season:
         features_text += f"主队赛季数据：{str(home_season)}\n"
     if away_season:
@@ -551,7 +596,11 @@ def extract_features(match_id, match_info):
         "odds_info": odds_info,
         "home_data": home_detailed_results,
         "away_data": away_detailed_results,
-        "history_data": history_data,
+        "home_win_h2h": home_win_h2h,
+        "draw_h2h": draw_h2h,
+        "away_win_h2h": away_win_h2h,
+        "last_6_h2h": last_6_h2h,
+        "total_h2h": total_h2h,
         "home_season": home_season,
         "away_season": away_season,
         "features_text": features_text
@@ -602,41 +651,16 @@ def build_training_dataset(match_data, output_format="instruction"):
         # 构建指令和期望输出
         instruction = f"请基于以下比赛数据，分析这场比赛的赔率变化和球队状态，并预测比赛结果。\n\n{features['features_text']}"
         
-        # 构建回答
+        # 构建回答，确保与提问内容一致
         answer = f"根据比赛数据和赔率分析，这场比赛的结果是{features['home_team']} {features['home_score']}-{features['away_score']} {features['away_team']}，最终结果为{['客胜', '平局', '未知', '主胜'][result] if result in [0,1,3] else '未知'}。\n\n"
         
         # 历史交锋分析
-        if features['history_data']:
-            # 统计历史交锋数据
-            home_win_h2h = 0
-            draw_h2h = 0
-            away_win_h2h = 0
-            total_h2h = len(features['history_data'])
-            
-            for match in features['history_data']:
-                if isinstance(match, list) and len(match) >= 5:
-                    h2h_result = match[4]
-                    if h2h_result == 3:  # 主队胜
-                        if match[0] == features['home_team_id']:
-                            home_win_h2h += 1
-                        else:
-                            away_win_h2h += 1
-                    elif h2h_result == 1:  # 平局
-                        draw_h2h += 1
-                    elif h2h_result == 0:  # 客队胜
-                        if match[1] == features['home_team_id']:
-                            home_win_h2h += 1
-                        else:
-                            away_win_h2h += 1
-            
+        if features['total_h2h'] > 0:
             answer += f"历史交锋分析：\n"
-            answer += f"  双方共交锋{total_h2h}次\n"
-            answer += f"  {features['home_team']}胜{home_win_h2h}场，平局{draw_h2h}场，{features['away_team']}胜{away_win_h2h}场\n"
-            if features['history_data'][:5]:
-                answer += f"  最近5次交锋：\n"
-                for i, match in enumerate(features['history_data'][:5]):
-                    if isinstance(match, list) and len(match) >= 6:
-                        answer += f"    {i+1}. {match[5]} {match[0]} {match[1]} {match[2]}-{match[3]} {['客胜', '平局', '未知', '主胜'][match[4]] if match[4] in [0,1,3] else '未知'}\n"
+            answer += f"  双方共交锋{features['total_h2h']}次\n"
+            answer += f"  {features['home_team']}胜{features['home_win_h2h']}场，平局{features['draw_h2h']}场，{features['away_team']}胜{features['away_win_h2h']}场\n"
+            if features['last_6_h2h']:
+                answer += f"  最近6场交锋：{', '.join(features['last_6_h2h'])}\n"
         
         # 赔率分析
         if features['odds_info']:
@@ -657,7 +681,6 @@ def build_training_dataset(match_data, output_format="instruction"):
         
         # 主队状态
         if features['home_data']:
-            # 统计主客队近期战绩
             home_wins = features['home_data'].count('胜')
             home_draws = features['home_data'].count('平')
             home_losses = features['home_data'].count('负')
@@ -670,6 +693,7 @@ def build_training_dataset(match_data, output_format="instruction"):
             away_losses = features['away_data'].count('负')
             answer += f"  客队近期战绩：{away_wins}胜{away_draws}平{away_losses}负，分别是{' '.join(features['away_data'])}\n"
         
+        # 赛季数据
         if features['home_season']:
             answer += f"  主队赛季数据：{str(features['home_season'])}\n"
         if features['away_season']:
