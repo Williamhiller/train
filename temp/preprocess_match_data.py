@@ -200,20 +200,42 @@ def normalize_team_history(team_data):
         team_data: 球队历史数据
         
     Returns:
-        list: 归一化后的球队历史数据
+        tuple: (文字版战绩, 详细战绩列表)
     """
-    normalized_data = []
-    if team_data and isinstance(team_data, list):
-        for match in team_data:
-            if isinstance(match, list) and len(match) >= 4:
-                # 转换为 [时间, 对手名称, 主队/客队, 结果] 格式
-                opponent = get_team_name(match[1])
-                timestamp = match[0]
-                is_home = "主" if match[2] == 1 else "客"
-                # 结果映射：3=胜，1=平，0=负
-                result = result_mapping.get(str(match[3]), str(match[3]))
-                normalized_data.append(f"{timestamp} {opponent} {is_home} {result}")
-    return normalized_data
+    if not team_data or not isinstance(team_data, list):
+        return "0胜0平0负，无近期战绩", []
+    
+    detailed_results = []
+    win_count = 0
+    draw_count = 0
+    loss_count = 0
+    
+    for match in team_data[:6]:  # 只取最近6场
+        if isinstance(match, list) and len(match) >= 5:
+                # 结果映射：3=胜，1=平，0=负，取数组第5个元素（索引4）
+                result_num = str(match[4])
+                if result_num == "3":
+                    result = "胜"
+                    win_count += 1
+                elif result_num == "1":
+                    result = "平"
+                    draw_count += 1
+                elif result_num == "0":
+                    result = "负"
+                    loss_count += 1
+                else:
+                    result = "未知"
+                
+                detailed_results.append(result)
+    
+    # 构建文字版战绩
+    total_matches = len(detailed_results)
+    if total_matches == 0:
+        text_result = "0胜0平0负，无近期战绩"
+    else:
+        text_result = f"{win_count}胜{draw_count}平{loss_count}负，分别是{' '.join(detailed_results)}"
+    
+    return text_result, detailed_results
 
 
 def analyze_odds_changes(odds_list):
@@ -434,8 +456,13 @@ def extract_features(match_id, match_info):
     
     # 提取球队历史数据并归一化
     history = details.get("history", {})
-    home_data = normalize_team_history(history.get("homeData", []))
-    away_data = normalize_team_history(history.get("awayData", []))
+    home_history_data = history.get("homeData", [])
+    away_history_data = history.get("awayData", [])
+    
+    # 获取文字版战绩
+    home_record_text, home_detailed_results = normalize_team_history(home_history_data)
+    away_record_text, away_detailed_results = normalize_team_history(away_history_data)
+    
     history_data = history.get("historyData", [])
     
     # 提取赛季数据
@@ -487,7 +514,7 @@ def extract_features(match_id, match_info):
     # 构建特征文本
     features_text = f"比赛时间：{match_time}\n"
     features_text += f"对阵：{home_team} VS {away_team}\n"
-    features_text += f"比赛结果：{home_score}-{away_score}（{['客胜', '平局', '未知', '主胜'][result] if result in [0,1,3] else '未知'}\n"    
+    features_text += f"比赛结果：{home_score}-{away_score}（{['客胜', '平局', '未知', '主胜'][result] if result in [0,1,3] else '未知'}\n"
     # 添加历史交锋数据
     if total_h2h > 0:
         features_text += f"历史交锋：共{total_h2h}次交锋，{home_team}胜{home_win_h2h}场，平局{draw_h2h}场，{away_team}胜{away_win_h2h}场\n"
@@ -502,11 +529,9 @@ def extract_features(match_id, match_info):
             odds_str.append(f"{odd['bookie_name']}：胜{odd['home_win']}，平{odd['draw']}，负{odd['away_win']}（趋势：{change_analysis['trend']}，主胜赔率{change_analysis['home_trend']}，平局赔率{change_analysis['draw_trend']}，客胜赔率{change_analysis['away_trend']}，显著变化{change_analysis['significant_changes']}次）")
         features_text += f"赔率信息：{'; '.join(odds_str)}\n"
     
-    # 球队近期战绩
-    if home_data:
-        features_text += f"主队近期战绩：{str(home_data[:6])}\n"
-    if away_data:
-        features_text += f"客队近期战绩：{str(away_data[:6])}\n"
+    # 球队近期战绩（文字版）
+    features_text += f"主队近期战绩：{home_record_text}\n"
+    features_text += f"客队近期战绩：{away_record_text}\n"
     
     # 赛季数据
     if home_season:
@@ -524,8 +549,8 @@ def extract_features(match_id, match_info):
         "home_score": home_score,
         "away_score": away_score,
         "odds_info": odds_info,
-        "home_data": home_data,
-        "away_data": away_data,
+        "home_data": home_detailed_results,
+        "away_data": away_detailed_results,
         "history_data": history_data,
         "home_season": home_season,
         "away_season": away_season,
@@ -629,12 +654,22 @@ def build_training_dataset(match_data, output_format="instruction"):
         
         # 球队状态分析
         answer += "球队状态分析：\n"
-        if features['home_data']:
-            answer += f"  主队近期6场战绩：{str(features['home_data'][:6])}\n"
-        if features['away_data']:
-            answer += f"  客队近期6场战绩：{str(features['away_data'][:6])}\n"
         
-        # 赛季数据
+        # 主队状态
+        if features['home_data']:
+            # 统计主客队近期战绩
+            home_wins = features['home_data'].count('胜')
+            home_draws = features['home_data'].count('平')
+            home_losses = features['home_data'].count('负')
+            answer += f"  主队近期战绩：{home_wins}胜{home_draws}平{home_losses}负，分别是{' '.join(features['home_data'])}\n"
+        
+        # 客队状态
+        if features['away_data']:
+            away_wins = features['away_data'].count('胜')
+            away_draws = features['away_data'].count('平')
+            away_losses = features['away_data'].count('负')
+            answer += f"  客队近期战绩：{away_wins}胜{away_draws}平{away_losses}负，分别是{' '.join(features['away_data'])}\n"
+        
         if features['home_season']:
             answer += f"  主队赛季数据：{str(features['home_season'])}\n"
         if features['away_season']:
