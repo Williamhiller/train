@@ -28,7 +28,7 @@ class Config:
     max_seq_length = 2048
     
     # 数据配置 - Colab版本
-    data_path = "../v5/data/expert_data/qwen_finetune_data.json"  # 专家数据路径（Colab本地路径）
+    data_path = "./v5/data/expert_data/qwen_finetune_data.json"  # 专家数据路径（Colab本地路径）
     
     # LoRA配置
     lora_r = 16
