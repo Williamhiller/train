@@ -38,10 +38,10 @@ models/cache/
 
 # 原始数据
 original-data/
-test-data/
+test_data/*
+train-data/
 *.csv
 *.xlsx
-*.json
 
 # 专家PDF数据
 pdf/
