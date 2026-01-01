@@ -28,7 +28,7 @@ class Config:
     max_seq_length = 2048
     
     # 数据配置 - Colab版本
-    data_path = "../v5/data/expert_data/qwen_finetune_data.json"  # 专家数据路径（Colab本地路径）
+    data_path = "./v5/data/expert_data/qwen_finetune_data.json"  # 专家数据路径（Colab本地路径）
     
     # LoRA配置
     lora_r = 16
@@ -145,9 +145,9 @@ def main():
             save_strategy="steps",
             save_steps=50,
             save_total_limit=2,
-            max_seq_length=Config.max_seq_length,
         ),
         dataset_text_field="text",
+        max_seq_length=Config.max_seq_length,
     )
     
     # 7. 开始训练
