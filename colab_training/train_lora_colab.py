@@ -127,7 +127,6 @@ def main():
         model=model,
         train_dataset=dataset,
         formatting_func=lambda example: example["text"],
-        tokenizer=tokenizer,
         args=TrainingArguments(
             per_device_train_batch_size=Config.per_device_train_batch_size,
             gradient_accumulation_steps=Config.gradient_accumulation_steps,
@@ -146,7 +145,6 @@ def main():
             save_steps=50,
             save_total_limit=2,
         ),
-        dataset_text_field="text",
         max_seq_length=Config.max_seq_length,
     )
     
