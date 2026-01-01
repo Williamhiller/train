@@ -65,7 +65,7 @@ def process_data(data):
         
         # 格式化样本
         text = f"### 指令：\n{instruction}\n\n### 输入：\n{input_text}\n\n### 回答：\n{output_text}"
-        processed_data.append(text)
+        processed_data.append({"text": text})
     return processed_data
 
 # ==================== 主函数 ====================
@@ -126,7 +126,7 @@ def main():
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
-        formatting_func=lambda example: example["text"],
+        dataset_text_field="text",
         args=TrainingArguments(
             per_device_train_batch_size=Config.per_device_train_batch_size,
             gradient_accumulation_steps=Config.gradient_accumulation_steps,
