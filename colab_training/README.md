@@ -55,8 +55,8 @@ pip install -q unsloth
 
 ```bash
 # 克隆项目到Colab
-git clone https://github.com/your-username/your-project.git
-cd your-project/train/colab_training
+git clone https://github.com/Williamhiller/train.git
+cd train/colab_training
 
 # 创建输出目录
 mkdir -p out
