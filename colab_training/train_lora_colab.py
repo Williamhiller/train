@@ -43,9 +43,18 @@ class Config:
     learning_rate = 1e-5
     weight_decay = 0.01
     
-    # 输出配置 - Colab本地路径
-    output_dir = "./out/qwen_lora_final"
+    # 输出配置 - Google Drive路径
+    gdrive_base_path = "/content/drive/MyDrive/qwen_training"  # Google Drive基础路径
+    output_dir = f"{gdrive_base_path}/lora_final"  # 最终权重保存路径
+    checkpoint_dir = f"{gdrive_base_path}/checkpoints"  # 检查点保存路径
     logging_steps = 10
+    
+    # 检查点保存策略
+    save_steps = 5  # 每5步保存一次检查点
+    save_total_limit = 10  # 保留最近10个检查点
+    
+    # 训练恢复配置
+    auto_resume = True  # 是否自动从最新检查点恢复训练
 
 # ==================== 辅助函数 ====================
 
@@ -68,12 +77,51 @@ def process_data(data):
         processed_data.append({"text": text})
     return processed_data
 
+
+def get_latest_checkpoint(checkpoint_dir):
+    """获取最新的检查点路径"""
+    if not os.path.exists(checkpoint_dir):
+        return None
+    
+    # 获取所有检查点目录
+    checkpoints = []
+    for item in os.listdir(checkpoint_dir):
+        checkpoint_path = os.path.join(checkpoint_dir, item)
+        if os.path.isdir(checkpoint_path):
+            checkpoints.append(checkpoint_path)
+    
+    if not checkpoints:
+        return None
+    
+    # 按修改时间排序，返回最新的
+    latest_checkpoint = max(checkpoints, key=os.path.getmtime)
+    return latest_checkpoint
+
 # ==================== 主函数 ====================
 
 def main():
     print("=" * 60)
     print("第一步训练：使用专家数据进行初始微调（Colab版本）")
     print("=" * 60)
+    
+    # 0. 检查并创建Google Drive目录
+    print(f"\n0. 检查Google Drive挂载和创建目录")
+    gdrive_base = Config.gdrive_base_path
+    
+    # 检查Google Drive是否已挂载
+    if not os.path.exists("/content/drive"):
+        print("   ⚠️  警告: Google Drive未挂载！")
+        print("   请在Colab中运行以下命令挂载Google Drive:")
+        print("   from google.colab import drive")
+        print("   drive.mount('/content/drive')")
+        print("\n   继续使用本地路径...")
+    else:
+        print(f"   ✓ Google Drive已挂载")
+        
+        # 创建必要的目录
+        for dir_path in [Config.checkpoint_dir, Config.output_dir]:
+            os.makedirs(dir_path, exist_ok=True)
+            print(f"   ✓ 目录已创建: {dir_path}")
     
     # 1. 检测设备
     print(f"\n1. 检测训练设备")
@@ -134,6 +182,24 @@ def main():
     
     # 6. 配置训练器（适配Colab GPU）
     print(f"\n6. 配置训练器")
+    print(f"   - 检查点保存路径: {Config.checkpoint_dir}")
+    print(f"   - 最终权重路径: {Config.output_dir}")
+    print(f"   - 检查点保存间隔: 每{Config.save_steps}步")
+    print(f"   - 保留检查点数量: {Config.save_total_limit}个")
+    
+    # 检查是否有可恢复的检查点
+    resume_from_checkpoint = None
+    if os.path.exists(Config.checkpoint_dir):
+        latest_checkpoint = get_latest_checkpoint(Config.checkpoint_dir)
+        if latest_checkpoint:
+            print(f"\n   ⚠️  检测到已有检查点: {latest_checkpoint}")
+            if Config.auto_resume:
+                resume_from_checkpoint = latest_checkpoint
+                print(f"   ✓ 将从检查点继续训练（auto_resume=True）")
+            else:
+                print(f"   ℹ️  将从头开始训练（auto_resume=False）")
+                print(f"   如需恢复，请设置 Config.auto_resume = True")
+    
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
@@ -150,11 +216,11 @@ def main():
             optim="adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
             weight_decay=Config.weight_decay,
             lr_scheduler_type="cosine",
-            output_dir=Config.output_dir,
+            output_dir=Config.checkpoint_dir,  # 检查点保存到Google Drive
             report_to="none",
             save_strategy="steps",
-            save_steps=50,
-            save_total_limit=2,
+            save_steps=Config.save_steps,  # 使用配置的保存步数
+            save_total_limit=Config.save_total_limit,  # 使用配置的保留数量
             gradient_checkpointing=True,
             ddp_find_unused_parameters=False,
             remove_unused_columns=False,
@@ -167,6 +233,8 @@ def main():
     print(f"   - 训练批次大小: {Config.per_device_train_batch_size}")
     print(f"   - 梯度累积步数: {Config.gradient_accumulation_steps}")
     print(f"   - 最大训练步数: {Config.max_steps}")
+    if resume_from_checkpoint:
+        print(f"   - 从检查点恢复: {resume_from_checkpoint}")
     print("\n" + "=" * 60)
     
     # 清理GPU缓存
@@ -174,7 +242,8 @@ def main():
         torch.cuda.empty_cache()
         print(f"GPU缓存已清理")
     
-    trainer.train()
+    # 从检查点恢复或从头开始训练
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     
     # 8. 保存最终权重
     print(f"\n8. 保存LoRA权重到: {Config.output_dir}")
