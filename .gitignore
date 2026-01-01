@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+.eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+*.bin
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 数据和模型
+models/
+models/cache/
+*.safetensors
+*.gguf
+
+# 原始数据
+original-data/
+test-data/
+*.csv
+*.xlsx
+*.json
+
+# 专家PDF数据
+pdf/
+*.pdf
+
+# 处理数据
+*/data/processed/
+*/data/expert_knowledge/embeddings/
+*.log
+logs/
+*.txt
+
+# 检查点
+checkpoints/
+*.pt
+*.pth
+!v5/checkpoints/best_model.pt
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+
+# v5项目相关
+v5/contexts/
+!v5/train_v5_colab_simple.ipynb
+!v5/COLAB_UPLOAD_GUIDE.md
