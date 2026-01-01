@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-第二步训练脚本 - 使用比赛数据进行进一步训练
+第二步训练脚本 - 使用预处理后的比赛数据进行进一步训练
 
 功能：
-1. 读取英超2015-2016赛季的聚合数据
-2. 提取赔率、球队状态等特征
-3. 构建适合Qwen模型训练的数据集
-4. 基于第一步训练好的LoRA权重进行进一步微调
+1. 读取预处理后的比赛数据（包含优化的特征提取和格式）
+2. 基于第一步训练好的LoRA权重进行进一步微调
+3. 支持GPU/CPU训练
 """
 
 import torch
@@ -26,7 +25,7 @@ class Config:
     max_seq_length = 2048
     
     # 比赛数据配置
-    match_data_path = "/Users/Williamhiler/Documents/my-project/train/examples"  # 绝对路径，指向目录，加载所有赛季数据
+    match_data_path = "/Users/Williamhiler/Documents/my-project/train/colab_training/match/match_train_data.json"  # 绝对路径，指向预处理后的数据
     
     # LoRA配置（进一步微调）
     lora_r = 16
@@ -45,144 +44,29 @@ class Config:
     output_dir = "/Users/Williamhiler/Documents/my-project/train/colab_training/out/match_finetune"  # 绝对路径
     logging_steps = 10
 
-def load_match_data(file_path_or_dir):
-    """加载比赛数据
-    
-    支持两种模式：
-    1. 加载单个文件
-    2. 加载目录下所有_aggregated.json结尾的文件并合并
+def load_processed_data(file_path):
+    """加载预处理后的训练数据
     
     Args:
-        file_path_or_dir: 文件路径或目录路径
+        file_path: 预处理后的数据文件路径
         
     Returns:
-        dict: 合并后的比赛数据
+        list: 训练样本列表
     """
-    # 检查是文件还是目录
-    if os.path.isfile(file_path_or_dir):
-        # 加载单个文件
-        with open(file_path_or_dir, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    elif os.path.isdir(file_path_or_dir):
-        # 加载目录下所有符合条件的文件
-        merged_data = {}
-        file_count = 0
-        
-        # 遍历目录下所有文件
-        for filename in os.listdir(file_path_or_dir):
-            if filename.endswith('_aggregated.json'):
-                file_path = os.path.join(file_path_or_dir, filename)
-                print(f"   - 加载文件：{filename}")
-                
-                # 加载单个文件
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    
-                # 合并数据
-                merged_data.update(data)
-                file_count += 1
-        
-        print(f"   - 共加载 {file_count} 个文件")
-        return merged_data
-    else:
-        raise ValueError(f"{file_path_or_dir} 不是有效的文件或目录路径")
-
-def extract_features(match_id, match_info):
-    """从比赛信息中提取特征"""
-    # 基本信息
-    match_time = match_info.get("matchTime", "")
-    home_team = match_info.get("homeTeamId", "")
-    away_team = match_info.get("awayTeamId", "")
-    result = match_info.get("result", "")
-    home_score = match_info.get("homeScore", 0)
-    away_score = match_info.get("awayScore", 0)
-    
-    # 提取赔率信息
-    odds_info = []
-    details = match_info.get("details", {})
-    odds = details.get("odds", {})
-    for bookie_id, odds_list in odds.items():
-        if odds_list and isinstance(odds_list, list):
-            latest_odds = odds_list[-1]  # 获取最新赔率
-            if len(latest_odds) >= 3:
-                odds_info.append(f"庄家{bookie_id}：胜{latest_odds[0]}，平{latest_odds[1]}，负{latest_odds[2]}")
-    
-    # 提取球队历史数据
-    history = details.get("history", {})
-    home_data = history.get("homeData", [])
-    away_data = history.get("awayData", [])
-    
-    # 构建特征文本
-    features = f"比赛ID：{match_id}\n"
-    features += f"比赛时间：{match_time}\n"
-    features += f"对阵：{home_team} VS {away_team}\n"
-    features += f"比赛结果：{home_score}-{away_score}（{['平局', '主胜', '客胜'][result] if result in [0,1,2] else '未知'}\n"
-    features += f"赔率信息：{'; '.join(odds_info)}\n"
-    features += f"主队近期战绩：{str(home_data[:3])}\n"
-    features += f"客队近期战绩：{str(away_data[:3])}\n"
-    
-    return features
-
-def build_training_dataset(match_data):
-    """构建训练数据集"""
-    training_samples = []
-    
-    for match_id, match_info in match_data.items():
-        # 提取基本信息
-        home_team = match_info.get("homeTeamId", "")
-        away_team = match_info.get("awayTeamId", "")
-        result = match_info.get("result", "")
-        home_score = match_info.get("homeScore", 0)
-        away_score = match_info.get("awayScore", 0)
-        
-        # 提取赔率信息
-        odds_info = []
-        details = match_info.get("details", {})
-        odds = details.get("odds", {})
-        for bookie_id, odds_list in odds.items():
-            if odds_list and isinstance(odds_list, list):
-                latest_odds = odds_list[-1]  # 获取最新赔率
-                if len(latest_odds) >= 3:
-                    odds_info.append(f"庄家{bookie_id}：胜{latest_odds[0]}，平{latest_odds[1]}，负{latest_odds[2]}")
-        
-        # 提取球队历史数据
-        history = details.get("history", {})
-        home_data = history.get("homeData", [])
-        away_data = history.get("awayData", [])
-        
-        # 提取特征
-        features = extract_features(match_id, match_info)
-        
-        # 构建指令和期望输出
-        instruction = f"请基于以下比赛数据，分析这场比赛的赔率变化和球队状态，并预测比赛结果。\n\n{features}"
-        
-        # 构建回答
-        answer = f"根据比赛数据和赔率分析，这场比赛的结果是{home_team} {home_score}-{away_score} {away_team}，最终结果为{['平局', '主胜', '客胜'][result] if result in [0,1,2] else '未知'}。\n\n赔率分析：{'; '.join(odds_info)}\n球队状态分析：主队近期战绩{str(home_data[:3])}，客队近期战绩{str(away_data[:3])}。"
-        
-        # 格式化样本为instruction-input-output格式
-        sample = {
-            "text": f"### 指令：\n{instruction}\n\n### 回答：\n{answer}"
-        }
-        training_samples.append(sample)
-    
-    return training_samples
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 def main():
     print("=" * 60)
     print("第二步训练：使用比赛数据进行微调")
     print("=" * 60)
     
-    # 1. 加载比赛数据
-    print(f"\n1. 加载比赛数据：{Config.match_data_path}")
-    match_data = load_match_data(Config.match_data_path)
-    print(f"   - 加载比赛场次：{len(match_data)}")
+    # 1. 加载预处理后的比赛数据
+    print(f"\n1. 加载预处理后的数据：{Config.match_data_path}")
+    training_samples = load_processed_data(Config.match_data_path)
+    print(f"   - 加载训练样本数量：{len(training_samples)}")
     
-    # 2. 构建训练数据集
-    print(f"\n2. 构建训练数据集")
-    training_samples = build_training_dataset(match_data)
-    print(f"   - 生成训练样本：{len(training_samples)}")
-    
-    # 3. 转换为Dataset格式
+    # 2. 转换为Dataset格式
     dataset = Dataset.from_list(training_samples)
     
     # 4. 检测设备

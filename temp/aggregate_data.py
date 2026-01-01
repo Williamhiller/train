@@ -143,7 +143,7 @@ def compress_data(data):
                 for key in ["homeData", "awayData", "historyData"]:
                     if key in history:
                         # 只保留最近5场比赛
-                        compressed_history[key] = history[key][:5] if len(history[key]) > 5 else history[key]
+                        compressed_history[key] = history[key][:6] if len(history[key]) > 6 else history[key]
                 
                 # 保留赛季数据
                 if "homeSeasonData" in history:
@@ -154,16 +154,16 @@ def compress_data(data):
                 if compressed_history:
                     compressed_details["history"] = compressed_history
             
-            # 深度压缩赔率数据：只保留最新的赔率数据
+            # 保留完整的赔率数据，包括所有赔率变化
             if "odds" in details:
                 odds = details["odds"]
                 compressed_odds = {}
                 
-                # 只保留每个赔率公司的最新一条数据
+                # 保留所有赔率变化记录
                 for bookmaker_id, odds_data in odds.items():
                     if isinstance(odds_data, list) and odds_data:
-                        # 只保留最新的赔率（假设最后一条是最新的）
-                        compressed_odds[bookmaker_id] = [odds_data[-1]]
+                        # 保留完整的赔率历史记录
+                        compressed_odds[bookmaker_id] = odds_data
                 
                 if compressed_odds:
                     compressed_details["odds"] = compressed_odds
