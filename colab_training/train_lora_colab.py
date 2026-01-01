@@ -65,7 +65,7 @@ def process_data(data):
         
         # 格式化样本
         text = f"### 指令：\n{instruction}\n\n### 输入：\n{input_text}\n\n### 回答：\n{output_text}"
-        processed_data.append({"text": text})
+        processed_data.append(text)
     return processed_data
 
 # ==================== 主函数 ====================
@@ -145,7 +145,6 @@ def main():
             save_steps=50,
             save_total_limit=2,
         ),
-        max_seq_length=Config.max_seq_length,
     )
     
     # 7. 开始训练
