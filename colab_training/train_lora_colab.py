@@ -36,8 +36,8 @@ class Config:
     lora_dropout = 0.05
     
     # 训练参数 - 适配Colab GPU
-    per_device_train_batch_size = 8  # 增大批次大小，利用GPU内存
-    gradient_accumulation_steps = 2  # 减少梯度累积步数
+    per_device_train_batch_size = 1  # 减小批次大小以节省内存
+    gradient_accumulation_steps = 16  # 增加梯度累积步数保持有效批次大小
     warmup_steps = 50
     max_steps = 300
     learning_rate = 1e-5
@@ -98,12 +98,23 @@ def main():
     
     # 直接从Hugging Face下载模型，不需要本地路径
     tokenizer = AutoTokenizer.from_pretrained(Config.base_model, use_fast=True)
+    
+    # 确保tokenizer有正确的pad_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    
     model = AutoModelForCausalLM.from_pretrained(
         Config.base_model,
         torch_dtype=dtype,
         device_map="auto" if device == "cuda" else None,
         trust_remote_code=True,
     )
+    
+    # 确保模型配置与tokenizer一致
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.bos_token_id = tokenizer.bos_token_id
+    model.config.eos_token_id = tokenizer.eos_token_id
     
     # 5. 配置LoRA
     print(f"\n5. 配置LoRA参数")
@@ -144,6 +155,9 @@ def main():
             save_strategy="steps",
             save_steps=50,
             save_total_limit=2,
+            gradient_checkpointing=True,
+            ddp_find_unused_parameters=False,
+            remove_unused_columns=False,
         ),
     )
     
@@ -154,6 +168,11 @@ def main():
     print(f"   - 梯度累积步数: {Config.gradient_accumulation_steps}")
     print(f"   - 最大训练步数: {Config.max_steps}")
     print("\n" + "=" * 60)
+    
+    # 清理GPU缓存
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        print(f"GPU缓存已清理")
     
     trainer.train()
     
