@@ -41,7 +41,16 @@ class Config:
     
     # 输出配置
     output_dir = "./colab_training/out"  # 本地输出目录
+    checkpoint_dir = "./colab_training/out/checkpoints"  # 检查点保存目录
+    final_output_dir = "./colab_training/out/qwen_lora_final"  # 最终权重保存目录
     logging_steps = 10  # 日志打印步数
+    
+    # 检查点保存策略
+    save_steps = 1  # 每5步保存一次检查点
+    save_total_limit = 5  # 保留最近10个检查点
+    
+    # 训练恢复配置
+    auto_resume = True  # 是否自动从最新检查点恢复训练
 
 # ==================== 数据处理 ====================
 def format_training_data(examples):
@@ -56,6 +65,24 @@ def format_training_data(examples):
         text = f"<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{instruction}{input_text}<|im_end|>\n<|im_start|>assistant\n{output_text}<|im_end|>"
         output_texts.append(text)
     return {"text": output_texts}
+
+
+def get_latest_checkpoint(checkpoint_dir):
+    """获取最新的检查点路径"""
+    if not os.path.exists(checkpoint_dir):
+        return None
+    
+    checkpoints = []
+    for item in os.listdir(checkpoint_dir):
+        checkpoint_path = os.path.join(checkpoint_dir, item)
+        if os.path.isdir(checkpoint_path):
+            checkpoints.append(checkpoint_path)
+    
+    if not checkpoints:
+        return None
+    
+    latest_checkpoint = max(checkpoints, key=os.path.getmtime)
+    return latest_checkpoint
 
 # ==================== 主训练函数 ====================
 def main():
@@ -121,6 +148,28 @@ def main():
     
     # 4. 配置训练器
     print(f"\n4. 配置训练器")
+    print(f"   - 检查点保存路径: {Config.checkpoint_dir}")
+    print(f"   - 最终权重路径: {Config.final_output_dir}")
+    print(f"   - 检查点保存间隔: 每{Config.save_steps}步")
+    print(f"   - 保留检查点数量: {Config.save_total_limit}个")
+    
+    # 创建必要的目录
+    os.makedirs(Config.checkpoint_dir, exist_ok=True)
+    os.makedirs(Config.final_output_dir, exist_ok=True)
+    
+    # 检查是否有可恢复的检查点
+    resume_from_checkpoint = None
+    if os.path.exists(Config.checkpoint_dir):
+        latest_checkpoint = get_latest_checkpoint(Config.checkpoint_dir)
+        if latest_checkpoint:
+            print(f"\n   ⚠️  检测到已有检查点: {latest_checkpoint}")
+            if Config.auto_resume:
+                resume_from_checkpoint = latest_checkpoint
+                print(f"   ✓ 将从检查点继续训练（auto_resume=True）")
+            else:
+                print(f"   ℹ️  将从头开始训练（auto_resume=False）")
+                print(f"   如需恢复，请设置 Config.auto_resume = True")
+    
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
@@ -137,11 +186,11 @@ def main():
             optim="adamw_torch",
             weight_decay=Config.weight_decay,
             lr_scheduler_type="cosine",
-            output_dir=Config.output_dir,
+            output_dir=Config.checkpoint_dir,  # 检查点保存到checkpoints目录
             report_to="none",
             save_strategy="steps",
-            save_steps=100,
-            save_total_limit=2,
+            save_steps=Config.save_steps,  # 使用配置的保存步数
+            save_total_limit=Config.save_total_limit,  # 使用配置的保留数量
             gradient_checkpointing=True,
             remove_unused_columns=False,
         ),
@@ -153,22 +202,24 @@ def main():
     print(f"   - 训练批次大小: {Config.per_device_train_batch_size}")
     print(f"   - 梯度累积步数: {Config.gradient_accumulation_steps}")
     print(f"   - 最大训练步数: {Config.max_steps}")
+    if resume_from_checkpoint:
+        print(f"   - 从检查点恢复: {resume_from_checkpoint}")
     print("\n" + "=" * 60)
     
-    trainer.train()
+    # 从检查点恢复或从头开始训练
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     
     # 6. 保存LoRA权重
-    print(f"\n6. 保存LoRA权重到: {Config.output_dir}")
-    final_output_dir = os.path.join(Config.output_dir, "qwen_lora_final")
-    model.save_pretrained(final_output_dir)
-    tokenizer.save_pretrained(final_output_dir)
+    print(f"\n6. 保存LoRA权重到: {Config.final_output_dir}")
+    model.save_pretrained(Config.final_output_dir)
+    tokenizer.save_pretrained(Config.final_output_dir)
     
     print(f"\n" + "=" * 60)
     print("训练完成！")
-    print(f"LoRA权重已保存到: {final_output_dir}")
+    print(f"LoRA权重已保存到: {Config.final_output_dir}")
     print("权重文件列表:")
-    for file in os.listdir(final_output_dir):
-        file_path = os.path.join(final_output_dir, file)
+    for file in os.listdir(Config.final_output_dir):
+        file_path = os.path.join(Config.final_output_dir, file)
         file_size = os.path.getsize(file_path) / 1024 / 1024  # MB
         print(f"   - {file}: {file_size:.2f} MB")
     print("=" * 60)
